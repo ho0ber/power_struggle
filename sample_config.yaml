@@ -1,0 +1,6 @@
+host: 127.0.0.1
+port: 12345
+rcon_port: 12346
+rcon_password: 12345
+ftp_user: user
+ftp_password: 12345
