@@ -16,10 +16,15 @@ class PowerStruggle:
         self.HasConfig = True
 
     def OnServerInitialized(self):
-        command.AddChatCommand('scores', self.Plugin, 'chat_scores')
+        command.AddChatCommand("scores", self.Plugin, "chat_scores")
         command.AddConsoleCommand("ps.scores", self.Plugin, "console_scores")
-        command.AddConsoleCommand("ps.request", self.Plugin, "console_request")
+        command.AddConsoleCommand("ps.post_scores", self.Plugin, "console_post_scores")
 
+        # Start score posting timer if enabled in config
+        if self.Config["post_scores"]:
+            timer.Repeat(self.Config["post_scores_every"], 0, Action(self.post_scores), self.Plugin)
+
+        # Edit stacksize of victory currency
         for item in ItemManager.itemList:
             if item.name == self.Config["currency_res"]:
                 item.stackable = self.Config["currency_stack"]
@@ -28,11 +33,17 @@ class PowerStruggle:
         self.Config["currency_item"] = "battery.small"
         self.Config["currency_res"] = "battery_small.item"
         self.Config["currency_stack"] = 1000
+        self.Config["post_scores"] = False
+        self.Config["post_scores_every"] = 30
+        self.Config["post_url"] = "http://127.0.0.1/scores"
 
     ###########################
     # Hooks
 
     def OnPlayerInit(self, player):
+        """
+        Caches names and steamIDs of players as they enter the world
+        """
         dataObj = data.GetData("PowerStruggle")
 
         if not "name_cache" in dataObj:
@@ -44,6 +55,9 @@ class PowerStruggle:
         data.SaveData("PowerStruggle")
 
     def OnEntitySpawned(self, entity):
+        """
+        Adds victory currency to containers as they spawn
+        """
         if hasattr(entity, "inventory") and type(entity.inventory) == ItemContainer:
             item = ItemManager.CreateByName(self.Config["currency_item"])
             item.MoveToContainer(entity.inventory, -1, False);
@@ -79,8 +93,11 @@ class PowerStruggle:
         for user, score in self.calc_scores().iteritems():
             print("{}: {}".format(dataObj["name_cache"][user], score))
 
-    def console_request(self, arg):
-        webrequests.EnqueueGet("http://ipinfo.io", Action[Int32,String](self.response_handler), self.Plugin);
+    def console_post_scores(self, arg):
+        """
+        Posts the scores to the configured post_url
+        """
+        self.post_scores()
 
     ###########################
     # Supporting Methods
@@ -117,8 +134,30 @@ class PowerStruggle:
 
         return scores
 
+    def post_scores(self):
+        """
+        Posts the scores to the configured post_url
+
+        NOTE: This currently passes json as a form value because it was not clear
+        how one could modify header/body directly using webrequests.EnqueuePost.
+        """
+        json = self.serialize_scores(self.calc_scores())
+        webrequests.EnqueuePost(self.Config["post_url"], 'json={}'.format(json), Action[Int32,String](self.response_handler), self.Plugin);
+
+    def serialize_scores(self, scores):
+        """
+        Serializes scores as json manually, as json is not available
+        """
+        dataObj = data.GetData("PowerStruggle")
+        template = '{}"name": "{}", "score": {}{}'
+        lines = [template.format("{", dataObj["name_cache"][user], score, "}") for user, score in scores.iteritems()]
+        return "[{}]".format(",".join(lines))
+
     def response_handler(self, code, response):
+        """
+        Callback method for http responses to our score posts
+        """
         if response == None or code != 200:
-            print "Couldn't get http request response!"
+            print "HTTP Response {} - {}".format(code, response)
             return
         print "Response: " + response

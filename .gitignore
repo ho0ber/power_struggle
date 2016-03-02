@@ -62,4 +62,7 @@ target/
 .ipynb_checkpoints
 
 config.yaml
+inventory.ini
 venv/
+
+*.db
