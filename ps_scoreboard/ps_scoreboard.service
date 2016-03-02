@@ -1,0 +1,12 @@
+[Unit]
+Description=Power Struggle Scoreboard Service
+
+[Service]
+User=root
+WorkingDirectory=/deploy/power_struggle/ps_scoreboard
+ExecStart=/bin/bash -c 'source /deploy/power_struggle/venv/bin/activate && python /deploy/power_struggle/ps_scoreboard/ps_scoreboard.py'
+Restart=always
+KillSignal=SIGQUIT
+
+[Install]
+WantedBy=multi-user.target

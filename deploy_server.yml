@@ -1,0 +1,53 @@
+#!/usr/bin/env ansible-playbook -i inventory.ini
+---
+- hosts: ps_scoreboard
+  remote_user: root
+  gather_facts: no
+  tasks:
+  -
+    name: set timezone
+    shell: 'if [[ `timedatectl status | grep "America/New_York" -c` == 0 ]]; then sudo timedatectl set-timezone America/New_York; echo changed; fi'
+    register: timezone_result
+    changed_when: '"changed" in timezone_result.stdout'
+  -
+    name: disable selinux
+    selinux: state=disabled
+  -
+    name: ensure deploy directory exists
+    file: "path=/deploy/power_struggle/ps_scoreboard state=directory owner=root group=root"
+  -
+    name: ensure hard requirements are up-to-date
+    dnf:  pkg={{ item }} state=latest
+    with_items:
+      -
+        - gcc
+        - python-devel
+        - python-pip
+        - python-virtualenv
+        - redhat-rpm-config
+  # -
+  #   name: ensure pip and virtualenv are easy_installed
+  #   easy_install: name={{ item }}
+  #   with_items:
+  #     - pip
+  #     - virtualenv
+  -
+    name: ensure source is up-to-date
+    copy: src=ps_scoreboard dest=/deploy/power_struggle/
+    tags: [quick]
+  -
+    name: copy in requirements
+    copy: src=requirements.txt dest=/deploy/power_struggle/requirements.txt
+  -
+    name: ensure requirements are installed
+    pip: requirements=/deploy/power_struggle/requirements.txt virtualenv=/deploy/power_struggle/venv virtualenv_command="virtualenv-2.7"
+  -
+    name: copy in fresh service
+    copy: src=ps_scoreboard/ps_scoreboard.service dest=/etc/systemd/system/ps_scoreboard.service
+  -
+    name: run daemon-reload
+    command: systemctl daemon-reload
+  -
+    name: ensure service is enabled and then restart it
+    service: name=ps_scoreboard enabled=yes state=restarted
+    tags: [quick]
