@@ -1,4 +1,6 @@
-![logo](logo.png)
+<div style="float: right">
+   ![logo](logo.png)
+</div>
 # Power Struggle
 A Rust (Experimental) Oxide 2 mod to provide victory conditions to vanilla-like gameplay
 
