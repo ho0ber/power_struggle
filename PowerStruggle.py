@@ -1,7 +1,10 @@
 import Rust
+import UnityEngine
 import ItemManager
 import ItemContainer
+import StorageContainer
 import PlayerInventory
+import BasePlayer
 
 class PowerStruggle:
     def __init__(self):
@@ -11,91 +14,71 @@ class PowerStruggle:
         self.HasConfig = True
 
     def OnServerInitialized(self):
-        command.AddChatCommand('scores', self.Plugin, 'scores')
-        command.AddConsoleCommand("server.scores", self.Plugin, "server_scores")
-        print "server init"
-        print self.Plugin.Title
-        # item = ItemManager.CreateByItemID(-770311783)
-
+        command.AddChatCommand('scores', self.Plugin, 'chat_scores')
+        command.AddConsoleCommand("ps.scores", self.Plugin, "console_scores")
+        for item in ItemManager.itemList:
+            if item.name == self.Config["currency_res"]:
+                item.stackable = self.Config["currency_stack"]
 
     def LoadDefaultConfig(self):
-        self.Config["authLevel"] = 1
-        self.Config["moep"] = (1, 0, 1)
-        self.Config["narf"] = { "entry1" : "oink", "entry2" : "blubb" }
+        self.Config["currency_item"] = "battery.small"
+        self.Config["currency_res"] = "battery_small.item"
+        self.Config["currency_stack"] = 1000
 
-    def server_scores(self, arg):
-        self.Config["authLevel"] = 2
-        # self.SaveConfig()
+    def calc_scores(self):
+        scores = {}
+
+        for item in UnityEngine.Resources.FindObjectsOfTypeAll(StorageContainer):
+            if hasattr(item, "inventory") and type(item.inventory) == ItemContainer:
+                if not item.OwnerID == 0:
+                    for i in item.inventory.itemList:
+                        if i.info.name == self.Config["currency_res"]:
+                            if not item.OwnerID in scores:
+                                scores[item.OwnerID] = 0
+                            scores[item.OwnerID] += i.amount
+
+        # for p in BasePlayer.activePlayerList:
+        #     for i in p.inventory.containerMain.itemList:
+        #         if i.info.name == "{}.item".format(self.Config["currency_res"]):
+        #             # print "{} (x{})".format(i.info.name, i.amount)
+        #             if not p.steamId in scores:
+        #                 scores.p.steamId = 0
+        #             scores[p.steamId] += i.amount
+
+        return scores
+
+
+    def chat_scores(self,player,cmd,args):
         dataObj = data.GetData("PowerStruggle")
-        dataObj["score"] = 100
+
+        scores = self.calc_scores()
+
+        for user, score in self.calc_scores().iteritems():
+            rust.SendChatMessage(player, "{}: {}".format(dataObj["name_cache"][user], score), None, "76561198235146288")
+
+        if not scores:
+            rust.SendChatMessage(player, "No players have any {}".format(self.Config["currency_item"]), None, "76561198235146288")
+
+    def console_scores(self, arg):
+        dataObj = data.GetData("PowerStruggle")
+        for user, score in self.calc_scores().iteritems():
+            print("{}: {}".format(dataObj["name_cache"][user], score))
+
+    # Hooks
+
+    def OnPlayerInit(self, player):
+        dataObj = data.GetData("PowerStruggle")
+        if not "name_cache" in dataObj:
+            dataObj["name_cache"] = {}
+        dataObj["name_cache"][player.userID] = player.displayName
+        dataObj["id_cache"][player.displayName] = player.userID
+        print "{}: {}".format(player.displayName, player.userID)
         data.SaveData("PowerStruggle")
-        print "Score: {0}".format(dataObj["score"])
-
-    def scores(self,player,cmd,args):
-        # dataObj = data.GetData("PowerStruggle")
-        # dataObj["scores"] = {"Hoober": 100, "Bob": 20}
-        # data.SaveData("PowerStruggle")
-
-        # print dataObj.keys()
-        # print "Score: {0}".format(dataObj["score"])
-        # print "player.displayName=" + player.displayName
-        # print "player.userID=" +str(player.userID)
-        # print "cmd=" +cmd
-        # print "number of arguments="+str(len(args))
-        # print str(args)
-
-        for p in player.activePlayerList:
-            for i in p.inventory.containerMain.itemList:
-                print i
-                print dir(i)
-                break
-                # print dir(i)
-
-        # for user, score in dataObj["scores"].iteritems():
-        #     rust.SendChatMessage(player, "{}: {}".format(user, score), None, "76561198235146288")
-
-    # def OnPlayerLoot(self, inventory, target):
-    #     print "OnPlayerLoot works!"
-    #     if hasattr(target, "inventory"):
-    #         print "inventory: {}".format(target.inventory)
-    def OnEntityTakeDamage(self, entity, info):
-        # print "OnEntityTakeDamage works!"
-        if hasattr(entity, "inventory"):
-            # print "inventory: {}".format(entity.inventory)
-            # print entity.inventory.itemList
-            # print dir(entity.inventory.itemList)
-            item = ItemManager.CreateByItemID(93832698)
-            # print(type(entity.inventory))
-            # print dir(item)
-            if type(entity.inventory) == ItemContainer:
-                item.MoveToContainer(entity.inventory, -1, False);
-            # elif type(entity.inventory) == PlayerInventory:
-            #     entity.inventory.GiveItem(ItemManager.CreateByName("blood"), 1);
-
-            # #     item.MoveToContainer(entity.inventory, -1, False);
-            # entity.inventory.itemList.Add(item)
-            # print entity.inventory.itemList
-
-    # def OnEntityDeath(self, entity, info):
-    #     print "OnEntityDeath works!"
-    #     if hasattr(entity, "inventory"):
-    #         print "inventory: {}".format(entity.inventory)
-    #         print entity.inventory.itemList
-    #         # print dir(entity.inventory.itemList)
-    #         item = ItemManager.CreateByItemID(-770311783)
-    #         entity.inventory.itemList.Add(item)
-    #         print entity.inventory.itemList
-            # entity.inventory.itemList
-            # item = ItemManager.CreateByItemID(-770311783);
-            # print item
-            # print dir(entity.inventory)
-
 
     def OnEntitySpawned(self, entity):
-        if hasattr(entity, "inventory"):
-            # print "inventory: {}".format(entity.inventory)
-            # print entity.inventory.itemList
-            # print dir(entity.inventory.itemList)
-            item = ItemManager.CreateByItemID(2021568998)
+        if hasattr(entity, "inventory") and type(entity.inventory) == ItemContainer:
+            item = ItemManager.CreateByName(self.Config["currency_item"])
             item.MoveToContainer(entity.inventory, -1, False);
-            print "Adding battery to {} - {}".format(entity.GetType(), entity.gameObject)\
+
+            prefab_name = entity.ToString().split("/")[-1].split(".prefab")[0]
+            print "Adding {} to {} ({})".format(self.Config["currency_item"], prefab_name, entity.GetType())
