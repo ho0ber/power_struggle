@@ -6,6 +6,8 @@ import StorageContainer
 import PlayerInventory
 import BasePlayer
 
+from System import Action, Int32, String
+
 class PowerStruggle:
     def __init__(self):
         self.Title = "PowerStruggle"
@@ -16,6 +18,7 @@ class PowerStruggle:
     def OnServerInitialized(self):
         command.AddChatCommand('scores', self.Plugin, 'chat_scores')
         command.AddConsoleCommand("ps.scores", self.Plugin, "console_scores")
+        command.AddConsoleCommand("ps.request", self.Plugin, "console_request")
 
         for item in ItemManager.itemList:
             if item.name == self.Config["currency_res"]:
@@ -76,6 +79,9 @@ class PowerStruggle:
         for user, score in self.calc_scores().iteritems():
             print("{}: {}".format(dataObj["name_cache"][user], score))
 
+    def console_request(self, arg):
+        webrequests.EnqueueGet("http://ipinfo.io", Action[Int32,String](self.response_handler), self.Plugin);
+
     ###########################
     # Supporting Methods
 
@@ -110,3 +116,9 @@ class PowerStruggle:
         #             scores[p.steamId] += i.amount
 
         return scores
+
+    def response_handler(self, code, response):
+        if response == None or code != 200:
+            print "Couldn't get http request response!"
+            return
+        print "Response: " + response
