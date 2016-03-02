@@ -1,5 +1,5 @@
 <div style="float: right">
-   ![logo](logo.png)
+   <img src="https://raw.githubusercontent.com/ho0ber/power_struggle/master/logo.png" />
 </div>
 # Power Struggle
 A Rust (Experimental) Oxide 2 mod to provide victory conditions to vanilla-like gameplay
