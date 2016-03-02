@@ -16,7 +16,7 @@ How do you "win" Rust? Hoard the most loot, of course! Power Struggle will flag 
 In addition to a hall of fame showing prior cycle winners, there will be a live scoreboard showing the leading players/teams in the current cycle. This will paint targets on heads, destroy neighborly friendships, and dramatically increase the stakes at the end of the cycle.
 
 ## Design Specifics
-* Ownership of victory currency in chests/boxes will be determined by the last person to have opened that chest.
+* Ownership of victory currency in chests/boxes will be determined by the person who placed the container.
 * The clans plugin will be used to allow groups to pool their currency on the scoreboard.
 * Drop rates of the victory currency will be modified to show up in barrels, crates, and (especially) airdrops.
 * The scoreboard will be available in-game and on a website (easy to know if you were raided without logging in).
