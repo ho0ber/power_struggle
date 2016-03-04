@@ -2,6 +2,7 @@ import Rust
 import UnityEngine
 import ItemManager
 import ItemContainer
+import LootContainer
 import StorageContainer
 import PlayerInventory
 import BasePlayer
@@ -19,6 +20,7 @@ class PowerStruggle:
         command.AddChatCommand("scores", self.Plugin, "chat_scores")
         command.AddConsoleCommand("ps.scores", self.Plugin, "console_scores")
         command.AddConsoleCommand("ps.post_scores", self.Plugin, "console_post_scores")
+        command.AddConsoleCommand("ps.charge_up", self.Plugin, "console_charge_up")
 
         # Start score posting timer if enabled in config
         if self.Config["post_scores"]:
@@ -49,6 +51,9 @@ class PowerStruggle:
         if not "name_cache" in dataObj:
             dataObj["name_cache"] = {}
 
+        if not "id_cache" in dataObj:
+            dataObj["id_cache"] = {}
+
         dataObj["name_cache"][player.userID] = player.displayName
         dataObj["id_cache"][player.displayName] = player.userID
 
@@ -58,6 +63,9 @@ class PowerStruggle:
         """
         Adds victory currency to containers as they spawn
         """
+        print "SPAWN {}".format(entity)
+        if entity.GetType() == LootContainer:
+            print "LOOOOOT!"
         if hasattr(entity, "inventory") and type(entity.inventory) == ItemContainer:
             item = ItemManager.CreateByName(self.Config["currency_item"])
             item.MoveToContainer(entity.inventory, -1, False);
@@ -98,6 +106,9 @@ class PowerStruggle:
         Posts the scores to the configured post_url
         """
         self.post_scores()
+
+    def console_charge_up(self, arg):
+        self.add_currency_to_all_loot()
 
     ###########################
     # Supporting Methods
@@ -161,3 +172,20 @@ class PowerStruggle:
             print "HTTP Response {} - {}".format(code, response)
             return
         print "Response: " + response
+
+    def add_currency_to_all_loot(self):
+        for entity in UnityEngine.Resources.FindObjectsOfTypeAll(LootContainer):
+            if hasattr(entity, "inventory") and type(entity.inventory) == ItemContainer:
+                has_currency = False
+                for i in entity.inventory.itemList:
+                    if i.info.name == self.Config["currency_res"]:
+                        has_currency == True
+                        break
+
+                if not has_currency:
+                    item = ItemManager.CreateByName(self.Config["currency_item"])
+                    item.MoveToContainer(entity.inventory, -1, False);
+
+                    prefab_name = entity.ToString().split("/")[-1].split(".prefab")[0]
+
+                    print "Adding {} to {} ({})".format(self.Config["currency_item"], prefab_name, entity.GetType())
