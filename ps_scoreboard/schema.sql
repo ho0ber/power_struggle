@@ -15,7 +15,7 @@ create table if not exists rosters(
 );
 
 create table if not exists current_scores(
-  name text,
+  steam_id text,
   score integer,
   timestamp datetime default current_timestamp
 );

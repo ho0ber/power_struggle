@@ -1,24 +1,54 @@
 {% extends "layout.html" %}
 {% block body %}
 <div class="col-md-8">
-  <table class="table table-hover">
-    <thead>
-      <tr><th>#</th>
-        <th>Name</th>
-        <th>Score</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for score in scores %}
-      <tr>
-        <th scope="row">{{ score.position }}</th>
-        <td>{{ score.name }}</td>
-        <td>{{ score.score }}</td>
-      </tr>
-    {% else %}
-        <tr>Unbelievable.  No entries here so far</tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</div>
+<ul id="leaderboard"></ul></div>
+<script>
+  poll();
+
+  function poll() {
+    $.ajax({
+      url: '/scores', // needs to return a JSON array of items having the following properties: id, score, facebook_id, username
+      dataType: 'json',
+      success: function(o) {
+        for(i=0;i<o.length;i++) {
+          if ($('#user-'+o[i].name).length == 0) {
+            // this id doesn't exist, so add it to our list.
+            $("#leaderboard").append('<li><h1 style="display:inline" id="user-' + o[i].name + '">' + o[i].score + '</h1> <img style="height:50px" src="' + o[i].avatar + '"/> ' + o[i].name + '</li>');
+          } else {
+            // this id does exist, so update 'score' count in the h1 tag in the list item.
+            $('#user-'+o[i].name).html(o[i].score);
+          }
+        }
+        sort();
+      },
+    });
+
+    // play it again, sam
+    t=setTimeout("poll()",3000);
+  }
+
+  function sort() {
+    var $Ul = $('ul#leaderboard');
+    $Ul.css({position:'relative',height:$Ul.height(),display:'block'});
+    var iLnH;
+    var $Li = $('ul#leaderboard>li');
+    $Li.each(function(i,el){
+      var iY = $(el).position().top;
+      $.data(el,'h',iY);
+      if (i===1) iLnH = iY;
+    });
+    $(tinysort($Li, {selector:'h1', order:'desc'})).each(function(i,el){
+      var $El = $(el);
+      var iFr = $.data(el,'h');
+      var iTo = i*iLnH;
+      $El.css({position:'absolute',top:iFr}).animate({top:iTo},500);
+    })
+    // $Li.tsort('h1:eq(0)',{order:'desc'}).each(function(i,el){
+    //   var $El = $(el);
+    //   var iFr = $.data(el,'h');
+    //   var iTo = i*iLnH;
+    //   $El.css({position:'absolute',top:iFr}).animate({top:iTo},500);
+    // });
+  }
+</script>
 {% endblock %}
