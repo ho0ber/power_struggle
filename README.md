@@ -1,4 +1,5 @@
 <img align="right" src="https://raw.githubusercontent.com/ho0ber/power_struggle/master/logo.png" />
+
 # Power Struggle
 A Rust (Experimental) Oxide 2 mod to provide victory conditions to vanilla-like gameplay
 
